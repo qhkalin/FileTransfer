@@ -35,16 +35,37 @@
                 </ul>
                 
                 <div class="d-flex">
+                    {% if current_user.is_authenticated %}
                     <!-- QR code toggle button for mobile upload -->
                     <button id="qr-enlarge-btn" class="btn btn-outline-secondary me-2">
                         <i class="fas fa-qrcode"></i> Mobile Upload
                     </button>
                     
                     <!-- Auto-backup toggle -->
-                    <div class="form-check form-switch d-flex align-items-center ms-2">
+                    <div class="form-check form-switch d-flex align-items-center ms-2 me-3">
                         <input class="form-check-input me-2" type="checkbox" id="auto-backup-toggle">
                         <label class="form-check-label small" for="auto-backup-toggle">Auto Backup</label>
                     </div>
+                    
+                    <!-- User dropdown -->
+                    <div class="dropdown">
+                        <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-user me-1"></i> {{ current_user.username }}
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                            <li><a class="dropdown-item" href="{{ url_for('logout') }}">
+                                <i class="fas fa-sign-out-alt me-2"></i> Logout
+                            </a></li>
+                        </ul>
+                    </div>
+                    {% else %}
+                    <a href="{{ url_for('login') }}" class="btn btn-outline-primary me-2">
+                        <i class="fas fa-sign-in-alt me-1"></i> Login
+                    </a>
+                    <a href="{{ url_for('signup') }}" class="btn btn-primary">
+                        <i class="fas fa-user-plus me-1"></i> Sign Up
+                    </a>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -56,13 +77,14 @@
     <!-- Alert container for notifications -->
     <div id="alert-container" class="position-fixed top-0 end-0 p-3" style="z-index: 1050;"></div>
     
+    {% if current_user.is_authenticated %}
     <!-- Lock warning alert -->
     <div id="folder-lock-alert" class="container lock-alert mt-3" style="display: none;">
         <h5 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i> Security Warning</h5>
         <p class="mb-0">Your folder isn't secure. Your files might be stolen or downloaded by anyone. Kindly generate a 64-byte key at the top left corner and click the sign button to secure your folder.</p>
     </div>
     
-    <!-- Key generator section - always visible at the top -->
+    <!-- Key generator section - only visible to authenticated users -->
     <div class="key-generator d-flex align-items-center">
         <div class="container-fluid">
             <div class="row">
@@ -99,6 +121,7 @@
             </div>
         </div>
     </div>
+    {% endif %}
     
     <!-- Alert container for notifications -->
     <div id="alert-container" class="container mt-3"></div>
@@ -125,6 +148,7 @@
         </div>
     </footer>
     
+    {% if current_user.is_authenticated %}
     <!-- Retrieve Folder Modal -->
     <div class="modal fade" id="retrieveFolderModal" tabindex="-1" aria-labelledby="retrieveFolderModalLabel" aria-hidden="true">
         <div class="modal-dialog">
@@ -173,6 +197,7 @@
             </div>
         </div>
     </div>
+    {% endif %}
 
     <!-- Bootstrap JavaScript Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

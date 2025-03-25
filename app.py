@@ -141,41 +141,32 @@ def index():
                           folder_locked=session.get('folder_locked', False))
 
 @app.route('/generate_key', methods=['POST'])
+@login_required
 def generate_key():
-    user_id = session.get('user_id')
-    if not user_id:
-        return redirect(url_for('index'))
-    
     # Generate a secure 64-byte key
     key = secrets.token_bytes(64)
     key_hex = key.hex()
     
-    user = User.query.get(user_id)
-    if user:
-        user.key_hash = key_hex  # In a real app, you'd hash this
-        db.session.commit()
+    current_user.key_hash = key_hex  # In a real app, you'd hash this
+    db.session.commit()
         
     return jsonify({'key': key_hex})
 
 @app.route('/lock_folder', methods=['POST'])
+@login_required
 def lock_folder():
-    user_id = session.get('user_id')
-    if not user_id:
-        return redirect(url_for('index'))
-    
     key = request.form.get('key')
     if not key or len(key) != 128:  # 64 bytes = 128 hex chars
         flash('Invalid key. Please generate a valid 64-byte key.')
         return redirect(url_for('index'))
     
-    user = User.query.get(user_id)
-    if user.key_hash == key:
+    if current_user.key_hash == key:
         # Set the session variables to indicate folder is locked and user has the key
         session['folder_locked'] = True
         session['has_key'] = True
         
         # Hide all files and folders when locked
-        root_folder = Folder.query.filter_by(user_id=user_id, parent_id=None).first()
+        root_folder = Folder.query.filter_by(user_id=current_user.id, parent_id=None).first()
         if root_folder:
             # Hide the main folder
             root_folder.is_visible = False
@@ -199,24 +190,20 @@ def lock_folder():
     return redirect(url_for('index'))
 
 @app.route('/unlock_folder', methods=['POST'])
+@login_required
 def unlock_folder():
-    user_id = session.get('user_id')
-    if not user_id:
-        return redirect(url_for('index'))
-    
     key = request.form.get('key')
     if not key or len(key) != 128:
         flash('Invalid key. Please provide your 64-byte key.')
         return redirect(url_for('index'))
     
-    user = User.query.get(user_id)
-    if user.key_hash == key:
+    if current_user.key_hash == key:
         # Set the session variables to indicate folder is unlocked and user has the key
         session['folder_locked'] = False
         session['has_key'] = True
         
         # Show all files and folders when unlocked
-        root_folder = Folder.query.filter_by(user_id=user_id, parent_id=None).first()
+        root_folder = Folder.query.filter_by(user_id=current_user.id, parent_id=None).first()
         if root_folder:
             # Show the main folder
             root_folder.is_visible = True
