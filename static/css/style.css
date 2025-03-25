@@ -1,0 +1,266 @@
+:root {
+    --sidebar-width: 280px;
+    --header-height: 60px;
+    --key-height: 50px;
+}
+
+body {
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+/* Header Styles */
+#main-header {
+    height: var(--header-height);
+    z-index: 1030;
+    border-bottom: 1px solid var(--bs-border-color);
+}
+
+/* Key Generator Section */
+.key-generator {
+    padding: 10px;
+    background-color: rgba(0, 0, 0, 0.03);
+    border-bottom: 1px solid var(--bs-border-color);
+    height: var(--key-height);
+}
+
+/* Layout Styles */
+.app-container {
+    display: flex;
+    min-height: calc(100vh - var(--header-height));
+}
+
+/* Sidebar Styles */
+.sidebar {
+    width: var(--sidebar-width);
+    background-color: var(--bs-dark-bg-subtle);
+    border-right: 1px solid var(--bs-border-color);
+    position: fixed;
+    left: 0;
+    top: var(--header-height);
+    bottom: 0;
+    overflow-y: auto;
+    z-index: 1020;
+}
+
+.sidebar .nav-link {
+    color: var(--bs-body-color);
+    border-radius: 0;
+}
+
+.sidebar .nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.sidebar .nav-link.active {
+    background-color: var(--bs-primary);
+    color: white;
+}
+
+.sidebar-heading {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    padding: 1rem;
+    font-weight: bold;
+    color: var(--bs-secondary-color);
+    letter-spacing: 0.05rem;
+}
+
+/* Main Content Area */
+.main-content {
+    flex: 1;
+    margin-left: var(--sidebar-width);
+    padding: 20px;
+    min-height: calc(100vh - var(--header-height));
+}
+
+/* File Manager Styles */
+.file-explorer {
+    background-color: var(--bs-dark-bg-subtle);
+    border-radius: 4px;
+    padding: 15px;
+    height: calc(100vh - var(--header-height) - 40px);
+    overflow-y: auto;
+}
+
+.folder-item, .file-item {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    margin-bottom: 5px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.folder-item:hover, .file-item:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.folder-item i, .file-item i {
+    margin-right: 10px;
+    font-size: 1.2rem;
+}
+
+.file-item.selected {
+    background-color: var(--bs-primary);
+    color: white;
+}
+
+/* Drop Zone Styles */
+.drop-zone {
+    border: 2px dashed var(--bs-border-color);
+    border-radius: 4px;
+    padding: 20px;
+    text-align: center;
+    margin-bottom: 15px;
+    transition: all 0.3s ease;
+    background-color: var(--bs-dark-bg-subtle);
+}
+
+.drop-zone:hover {
+    border-color: var(--bs-primary);
+}
+
+.drop-zone.highlight {
+    border-color: var(--bs-primary);
+    background-color: rgba(var(--bs-primary-rgb), 0.05);
+}
+
+.drop-zone p {
+    margin-bottom: 0;
+}
+
+/* File Details Panel */
+.file-details {
+    padding: 15px;
+    border-radius: 4px;
+    background-color: var(--bs-dark-bg-subtle);
+    height: 100%;
+}
+
+.file-preview {
+    text-align: center;
+    margin-bottom: 15px;
+}
+
+.file-preview img {
+    max-height: 200px;
+    max-width: 100%;
+    border-radius: 4px;
+}
+
+/* QR Code Section */
+.qr-section {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.qr-code {
+    display: inline-block;
+    padding: 10px;
+    background-color: white;
+    border-radius: 4px;
+    margin-bottom: 10px;
+}
+
+.qr-code img {
+    width: 150px;
+    height: 150px;
+}
+
+/* Upload Progress Bar */
+.upload-progress {
+    display: none;
+    margin-top: 15px;
+}
+
+/* Form Controls */
+.form-control:focus, .btn:focus {
+    box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25);
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.fade-in {
+    animation: fadeIn 0.3s ease;
+}
+
+/* Alert banner for unlocked folder */
+.lock-alert {
+    background-color: var(--bs-warning-bg-subtle);
+    border-left: 4px solid var(--bs-warning);
+    padding: 15px;
+    margin-bottom: 20px;
+    border-radius: 4px;
+}
+
+/* Responsive styles for mobile */
+@media (max-width: 768px) {
+    .sidebar {
+        width: 100%;
+        position: static;
+        height: auto;
+    }
+    
+    .main-content {
+        margin-left: 0;
+    }
+    
+    .app-container {
+        flex-direction: column;
+    }
+    
+    .file-explorer {
+        height: auto;
+    }
+}
+
+/* Clearbit logo styles */
+.clearbit-logo {
+    height: 20px;
+    margin-right: 8px;
+}
+
+/* Auto-backup toggle section */
+.auto-backup-section {
+    margin-top: 15px;
+    padding: 10px;
+    background-color: var(--bs-dark-bg-subtle);
+    border-radius: 4px;
+}
+
+.form-switch .form-check-input {
+    width: 2.5em;
+    height: 1.25em;
+}
+
+/* Breadcrumb styles */
+.breadcrumb-container {
+    padding: 8px 0;
+    margin-bottom: 15px;
+}
+
+/* File upload form */
+.file-upload-form {
+    margin-bottom: 20px;
+}
+
+/* Mobile upload page styles */
+.mobile-upload-container {
+    max-width: 500px;
+    margin: 50px auto;
+    padding: 20px;
+}
+
+.mobile-file-input {
+    margin-bottom: 15px;
+}

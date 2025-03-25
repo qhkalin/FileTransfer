@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mobile Upload - SecureFileVault</title>
+    
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body {
+            padding-top: 20px;
+            padding-bottom: 50px;
+        }
+        .upload-container {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .upload-progress {
+            display: none;
+            margin-top: 15px;
+        }
+        .file-preview {
+            margin-top: 15px;
+            display: none;
+        }
+        .file-list {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .result-message {
+            display: none;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container upload-container">
+        <div class="logo">
+            <h2><i class="fas fa-lock me-2"></i> SecureFileVault</h2>
+            <p class="text-muted">Mobile File Upload</p>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Upload Files</h5>
+            </div>
+            <div class="card-body">
+                <form id="upload-form" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="file-input" class="form-label">Select files from your device</label>
+                        <input type="file" class="form-control" id="file-input" name="file" multiple required>
+                        <div class="form-text">You can select multiple files</div>
+                    </div>
+                    
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="auto-backup" name="auto_backup">
+                        <label class="form-check-label" for="auto-backup">Auto File Select</label>
+                        <div class="form-text">Automatically process files without additional confirmation</div>
+                    </div>
+                    
+                    <div class="file-preview">
+                        <h6>Selected Files:</h6>
+                        <ul id="file-list" class="list-group file-list mb-3">
+                            <!-- Files will be listed here -->
+                        </ul>
+                        <div class="d-flex justify-content-between">
+                            <span id="total-files">0 files selected</span>
+                            <span id="total-size">0 bytes</span>
+                        </div>
+                    </div>
+                    
+                    <div class="upload-progress" id="upload-progress-container">
+                        <label id="upload-progress-text" class="form-label">Uploading files...</label>
+                        <div class="progress mb-3">
+                            <div id="upload-progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-success result-message" id="success-message">
+                        <i class="fas fa-check-circle me-2"></i>
+                        <span id="success-text">Files uploaded successfully!</span>
+                    </div>
+                    
+                    <div class="alert alert-danger result-message" id="error-message">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        <span id="error-text">An error occurred.</span>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary" id="upload-btn">
+                            <i class="fas fa-cloud-upload-alt me-2"></i> Upload Files
+                        </button>
+                        <button type="button" class="btn btn-secondary" id="new-upload-btn" style="display: none;">
+                            <i class="fas fa-plus me-2"></i> Upload More Files
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Bootstrap JavaScript Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('upload-form');
+            const fileInput = document.getElementById('file-input');
+            const filePreview = document.querySelector('.file-preview');
+            const fileList = document.getElementById('file-list');
+            const totalFiles = document.getElementById('total-files');
+            const totalSize = document.getElementById('total-size');
+            const progressContainer = document.getElementById('upload-progress-container');
+            const progressBar = document.getElementById('upload-progress-bar');
+            const progressText = document.getElementById('upload-progress-text');
+            const successMessage = document.getElementById('success-message');
+            const successText = document.getElementById('success-text');
+            const errorMessage = document.getElementById('error-message');
+            const errorText = document.getElementById('error-text');
+            const uploadBtn = document.getElementById('upload-btn');
+            const newUploadBtn = document.getElementById('new-upload-btn');
+            const autoBackup = document.getElementById('auto-backup');
+            
+            let isUploading = false;
+            
+            function resetForm() {
+                form.reset();
+                filePreview.style.display = 'none';
+                fileList.innerHTML = '';
+                totalFiles.textContent = '0 files selected';
+                totalSize.textContent = '0 bytes';
+                progressContainer.style.display = 'none';
+                progressBar.style.width = '0%';
+                successMessage.style.display = 'none';
+                errorMessage.style.display = 'none';
+                uploadBtn.style.display = 'block';
+                newUploadBtn.style.display = 'none';
+                isUploading = false;
+            }
+            
+            function formatSize(bytes) {
+                if (bytes < 1024) return bytes + ' bytes';
+                else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+                else if (bytes < 1073741824) return (bytes / 1048576).toFixed(1) + ' MB';
+                else return (bytes / 1073741824).toFixed(1) + ' GB';
+            }
+            
+            fileInput.addEventListener('change', function() {
+                const files = this.files;
+                
+                if (files.length === 0) {
+                    filePreview.style.display = 'none';
+                    return;
+                }
+                
+                filePreview.style.display = 'block';
+                fileList.innerHTML = '';
+                
+                let totalSizeBytes = 0;
+                
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    totalSizeBytes += file.size;
+                    
+                    const li = document.createElement('li');
+                    li.className = 'list-group-item d-flex justify-content-between align-items-center';
+                    
+                    const fileName = document.createElement('span');
+                    fileName.textContent = file.name;
+                    
+                    const fileSize = document.createElement('span');
+                    fileSize.className = 'badge bg-primary rounded-pill';
+                    fileSize.textContent = formatSize(file.size);
+                    
+                    li.appendChild(fileName);
+                    li.appendChild(fileSize);
+                    fileList.appendChild(li);
+                }
+                
+                totalFiles.textContent = files.length + ' files selected';
+                totalSize.textContent = formatSize(totalSizeBytes);
+                
+                // Auto upload if auto-backup is enabled
+                if (autoBackup.checked) {
+                    form.dispatchEvent(new Event('submit'));
+                }
+            });
+            
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                if (isUploading) return;
+                
+                const files = fileInput.files;
+                if (files.length === 0) {
+                    alert('Please select at least one file to upload.');
+                    return;
+                }
+                
+                isUploading = true;
+                
+                const formData = new FormData();
+                for (let i = 0; i < files.length; i++) {
+                    formData.append('file', files[i]);
+                }
+                
+                formData.append('auto_backup', autoBackup.checked);
+                
+                // Show progress
+                progressContainer.style.display = 'block';
+                successMessage.style.display = 'none';
+                errorMessage.style.display = 'none';
+                uploadBtn.disabled = true;
+                
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', window.location.href, true);
+                
+                xhr.upload.onprogress = function(e) {
+                    if (e.lengthComputable) {
+                        const percentComplete = Math.round((e.loaded / e.total) * 100);
+                        progressBar.style.width = percentComplete + '%';
+                        progressBar.setAttribute('aria-valuenow', percentComplete);
+                        progressText.textContent = `Uploading: ${percentComplete}%`;
+                    }
+                };
+                
+                xhr.onload = function() {
+                    uploadBtn.disabled = false;
+                    
+                    if (xhr.status === 200) {
+                        try {
+                            const response = JSON.parse(xhr.responseText);
+                            
+                            if (response.success) {
+                                successMessage.style.display = 'block';
+                                successText.textContent = response.message;
+                                uploadBtn.style.display = 'none';
+                                newUploadBtn.style.display = 'block';
+                            } else {
+                                errorMessage.style.display = 'block';
+                                errorText.textContent = response.message || 'An error occurred during upload.';
+                            }
+                        } catch (error) {
+                            errorMessage.style.display = 'block';
+                            errorText.textContent = 'Could not parse server response.';
+                        }
+                    } else {
+                        errorMessage.style.display = 'block';
+                        errorText.textContent = 'Server error: ' + xhr.status;
+                    }
+                    
+                    isUploading = false;
+                };
+                
+                xhr.onerror = function() {
+                    uploadBtn.disabled = false;
+                    errorMessage.style.display = 'block';
+                    errorText.textContent = 'A network error occurred.';
+                    isUploading = false;
+                };
+                
+                xhr.send(formData);
+            });
+            
+            newUploadBtn.addEventListener('click', resetForm);
+            
+            // Check local storage for auto-backup preference
+            const savedAutoBackup = localStorage.getItem('autoBackupEnabled');
+            if (savedAutoBackup !== null) {
+                autoBackup.checked = savedAutoBackup === 'true';
+            }
+            
+            // Save auto-backup preference
+            autoBackup.addEventListener('change', function() {
+                localStorage.setItem('autoBackupEnabled', this.checked);
+            });
+        });
+    </script>
+</body>
+</html>
