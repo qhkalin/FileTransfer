@@ -227,11 +227,8 @@ def unlock_folder():
     return redirect(url_for('index'))
 
 @app.route('/create_folder', methods=['POST'])
+@login_required
 def create_folder():
-    user_id = session.get('user_id')
-    if not user_id:
-        return redirect(url_for('index'))
-    
     parent_id = request.form.get('parent_id')
     folder_name = request.form.get('folder_name')
     
@@ -239,7 +236,7 @@ def create_folder():
         flash('Folder name is required.')
         return redirect(url_for('index'))
     
-    new_folder = Folder(name=folder_name, user_id=user_id, parent_id=parent_id)
+    new_folder = Folder(name=folder_name, user_id=current_user.id, parent_id=parent_id)
     db.session.add(new_folder)
     db.session.commit()
     
@@ -247,15 +244,12 @@ def create_folder():
     return redirect(url_for('index'))
 
 @app.route('/folder/<int:folder_id>')
+@login_required
 def view_folder(folder_id):
-    user_id = session.get('user_id')
-    if not user_id:
-        return redirect(url_for('index'))
-    
     folder = Folder.query.get_or_404(folder_id)
     
     # Security check - only allow access to user's own folders
-    if folder.user_id != user_id:
+    if folder.user_id != current_user.id:
         flash('Access denied.')
         return redirect(url_for('index'))
     
