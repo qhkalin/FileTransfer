@@ -272,6 +272,30 @@ function setupFolderActions() {
             }
         });
     });
+    
+    // Rename folder buttons
+    const renameFolderBtns = document.querySelectorAll('.rename-folder-btn');
+    const renameFolderForm = document.getElementById('rename-folder-form');
+    const renameFolderInput = document.getElementById('rename-folder-input');
+    
+    if (renameFolderBtns && renameFolderForm && renameFolderInput) {
+        renameFolderBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const folderId = btn.getAttribute('data-folder-id');
+                const folderName = btn.getAttribute('data-folder-name');
+                
+                // Update the form action to include the folder ID
+                renameFolderForm.action = `/rename_folder/${folderId}`;
+                
+                // Set the current folder name in the input
+                renameFolderInput.value = folderName || '';
+                
+                // Show the modal
+                const renameModal = new bootstrap.Modal(document.getElementById('renameFolderModal'));
+                renameModal.show();
+            });
+        });
+    }
 }
 
 function setupFileSelection() {

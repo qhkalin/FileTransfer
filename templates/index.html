@@ -1,6 +1,8 @@
 {% extends 'base.html' %}
 
 {% block content %}
+<!-- Hidden element for folder lock status -->
+<div id="folder-lock-status" data-locked="{{ folder_locked }}"></div>
 <!-- Current folder information (hidden) -->
 <div id="current-folder" data-folder-id="{{ root_folder.id if root_folder else '' }}"></div>
 
