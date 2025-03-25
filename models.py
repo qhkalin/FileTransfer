@@ -14,6 +14,7 @@ class Folder(db.Model):
     name = db.Column(db.String(255), nullable=False)
     parent_id = db.Column(db.Integer, db.ForeignKey('folder.id'), nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    is_visible = db.Column(db.Boolean, default=True)  # Flag to control folder visibility
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     

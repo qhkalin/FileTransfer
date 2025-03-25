@@ -1,6 +1,8 @@
 import os
 import logging
-from flask import Flask, render_template, request, redirect, flash, url_for, session, jsonify, send_from_directory
+import zipfile
+import shutil
+from flask import Flask, render_template, request, redirect, flash, url_for, session, jsonify, send_from_directory, Response
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase
 import qrcode
@@ -129,7 +131,26 @@ def lock_folder():
     user = User.query.get(user_id)
     if user.key_hash == key:
         session['folder_locked'] = True
-        flash('Your folder has been securely locked.')
+        
+        # Hide all files and folders when locked
+        root_folder = Folder.query.filter_by(user_id=user_id, parent_id=None).first()
+        if root_folder:
+            # Hide the main folder
+            root_folder.is_visible = False
+            
+            # Update visibility of all subfolders recursively
+            def set_folder_visibility(folder_id, visible):
+                # Update subfolders
+                subfolders = Folder.query.filter_by(parent_id=folder_id).all()
+                for subfolder in subfolders:
+                    subfolder.is_visible = visible
+                    set_folder_visibility(subfolder.id, visible)
+            
+            # Hide all subfolders
+            set_folder_visibility(root_folder.id, False)
+            db.session.commit()
+            
+        flash('Your folder has been securely locked and hidden.')
     else:
         flash('Invalid key. Could not lock folder.')
     
@@ -149,7 +170,26 @@ def unlock_folder():
     user = User.query.get(user_id)
     if user.key_hash == key:
         session['folder_locked'] = False
-        flash('Your folder has been unlocked.')
+        
+        # Show all files and folders when unlocked
+        root_folder = Folder.query.filter_by(user_id=user_id, parent_id=None).first()
+        if root_folder:
+            # Show the main folder
+            root_folder.is_visible = True
+            
+            # Update visibility of all subfolders recursively
+            def set_folder_visibility(folder_id, visible):
+                # Update subfolders
+                subfolders = Folder.query.filter_by(parent_id=folder_id).all()
+                for subfolder in subfolders:
+                    subfolder.is_visible = visible
+                    set_folder_visibility(subfolder.id, visible)
+            
+            # Show all subfolders
+            set_folder_visibility(root_folder.id, True)
+            db.session.commit()
+            
+        flash('Your folder has been unlocked and is now visible.')
     else:
         flash('Invalid key. Could not unlock folder.')
     
@@ -441,6 +481,117 @@ def file_details(file_id):
         'created_at': file.created_at.strftime('%Y-%m-%d %H:%M:%S'),
         'download_url': url_for('download_file', file_id=file.id)
     })
+
+@app.route('/download_folder/<int:folder_id>')
+def download_folder(folder_id):
+    """Download all files in a folder as a zip archive"""
+    user_id = session.get('user_id')
+    if not user_id:
+        return redirect(url_for('index'))
+    
+    folder = Folder.query.get_or_404(folder_id)
+    
+    # Security check
+    if folder.user_id != user_id:
+        flash('Access denied.')
+        return redirect(url_for('index'))
+    
+    # Check if folder is locked and user is authenticated
+    if session.get('folder_locked', False) == False:
+        flash('Your folder is not locked. Please lock your folder for security.')
+        return redirect(url_for('index'))
+    
+    # Create a temporary directory to store the folder structure
+    temp_dir = os.path.join(app.config['UPLOAD_FOLDER'], f"temp_{str(uuid.uuid4())}")
+    os.makedirs(temp_dir)
+    
+    # Create a zip file in memory
+    memory_file = BytesIO()
+    
+    try:
+        with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            def add_folder_to_zip(current_folder, zip_path):
+                # Add files in this folder
+                files = File.query.filter_by(folder_id=current_folder.id).all()
+                for file in files:
+                    if os.path.exists(file.path):
+                        # Add file to zip with its original name, preserving folder structure
+                        zipf.write(file.path, os.path.join(zip_path, file.name))
+                
+                # Process subfolders recursively
+                subfolders = Folder.query.filter_by(parent_id=current_folder.id).all()
+                for subfolder in subfolders:
+                    subfolder_path = os.path.join(zip_path, subfolder.name)
+                    add_folder_to_zip(subfolder, subfolder_path)
+            
+            # Start with the requested folder
+            add_folder_to_zip(folder, folder.name)
+        
+        # Reset file position to the beginning
+        memory_file.seek(0)
+        
+        # Return the zip file as an attachment
+        return Response(
+            memory_file.getvalue(),
+            mimetype='application/zip',
+            headers={
+                'Content-Disposition': f'attachment; filename={folder.name}.zip'
+            }
+        )
+    
+    finally:
+        # Clean up the temporary directory
+        if os.path.exists(temp_dir):
+            shutil.rmtree(temp_dir)
+
+@app.route('/rename_folder/<int:folder_id>', methods=['POST'])
+def rename_folder(folder_id):
+    """Rename a folder"""
+    user_id = session.get('user_id')
+    if not user_id:
+        return redirect(url_for('index'))
+    
+    folder = Folder.query.get_or_404(folder_id)
+    
+    # Security check
+    if folder.user_id != user_id:
+        flash('Access denied.')
+        return redirect(url_for('index'))
+    
+    new_name = request.form.get('folder_name')
+    if not new_name:
+        flash('Folder name is required.')
+        return redirect(url_for('index'))
+    
+    folder.name = new_name
+    db.session.commit()
+    
+    flash(f'Folder renamed to "{new_name}" successfully.')
+    if folder.parent_id:
+        return redirect(url_for('view_folder', folder_id=folder.parent_id))
+    else:
+        return redirect(url_for('index'))
+
+@app.route('/retrieve_folder', methods=['POST'])
+def retrieve_folder():
+    """Retrieve a folder using a 64-byte key"""
+    key = request.form.get('key')
+    if not key or len(key) != 128:
+        flash('Invalid key. Please provide your 64-byte key.')
+        return redirect(url_for('index'))
+    
+    # Find user with matching key
+    user = User.query.filter_by(key_hash=key).first()
+    if not user:
+        flash('Invalid key. No folder found with this key.')
+        return redirect(url_for('index'))
+    
+    # Set session to this user
+    session['user_id'] = user.id
+    session['folder_locked'] = False  # Unlock the folder for access
+    
+    flash('Folder retrieved successfully! You now have access to all files.')
+    return redirect(url_for('index'))
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)

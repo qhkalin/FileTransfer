@@ -91,6 +91,9 @@
                                 <i class="fas fa-unlock me-1"></i> Unlock
                             </button>
                         </form>
+                        <button id="retrieve-folder-btn" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#retrieveFolderModal">
+                            <i class="fas fa-key me-1"></i> Retrieve Folder
+                        </button>
                     </div>
                 </div>
             </div>
@@ -119,6 +122,55 @@
         </div>
     </footer>
     
+    <!-- Retrieve Folder Modal -->
+    <div class="modal fade" id="retrieveFolderModal" tabindex="-1" aria-labelledby="retrieveFolderModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="retrieveFolderModalLabel">Retrieve Folder with 64-byte Key</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form action="/retrieve_folder" method="POST">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="retrieve-key-input" class="form-label">64-byte Key</label>
+                            <textarea id="retrieve-key-input" name="key" class="form-control" rows="3" placeholder="Paste your 64-byte key here (128 characters)" required></textarea>
+                            <div class="form-text">Enter the 64-byte key used to secure the folder you want to access.</div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Retrieve Folder</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rename Folder Modal -->
+    <div class="modal fade" id="renameFolderModal" tabindex="-1" aria-labelledby="renameFolderModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="renameFolderModalLabel">Rename Folder</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="rename-folder-form" action="/rename_folder/0" method="POST">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="folder-name-input" class="form-label">New Folder Name</label>
+                            <input type="text" class="form-control" id="folder-name-input" name="folder_name" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Rename</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Bootstrap JavaScript Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
