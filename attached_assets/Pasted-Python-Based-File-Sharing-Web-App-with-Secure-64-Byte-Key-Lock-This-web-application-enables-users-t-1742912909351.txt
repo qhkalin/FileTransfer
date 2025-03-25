@@ -1,0 +1,71 @@
+Python-Based File Sharing Web App with Secure 64-Byte Key Lock
+
+This web application enables users to share, store, and organize files securely using a 64-byte encryption key instead of a password. It features QR code-based file sharing, an auto-backup option, and a structured folder system with security alerts if folders are left unlocked.
+
+🛠️ Core Features:
+
+1️⃣ Generate a Unique 64-Byte Key for Secure Access
+	•	When users land on the homepage, they click “Generate Key” to create a unique 64-byte encryption key.
+	•	This key is used to lock the user’s main folder, preventing unauthorized access.
+	•	Users must save their key—if lost, access to the folder is permanently denied.
+	•	A header warning message appears if the folder is unlocked, stating:
+	“Your folder isn’t secure. Your files might be stolen or downloaded by anyone. Kindly generate a 64-byte key at the top left corner and click the sign button to secure your folder.”
+
+2️⃣ Folder System with Subfolders
+	•	Users can create multiple subfolders inside their main locked folder.
+	•	If the main folder isn’t locked, subfolders remain unprotected.
+	•	Once locked, the main folder encrypts all subfolders and files.
+
+3️⃣ QR Code-Based File Sharing
+	•	The homepage generates a QR code.
+	•	When scanned, it redirects users to the file upload page on mobile.
+	•	Users select files and send them to the desktop file manager.
+
+4️⃣ Auto File Selection for Quick Backup
+	•	Users can enable “Auto File Select”, allowing the system to:
+	•	Automatically select all files (images, PDFs, videos, etc.).
+	•	Trigger processing instantly upon scanning the QR code.
+	•	Upload everything in the background without manual selection.
+
+5️⃣ File Manager with Advanced UI
+	•	Users view, manage, and retrieve files in an interactive UI.
+	•	Drag & Drop Upload Support.
+	•	File Preview Before Upload.
+	•	Live Upload Progress Bar.
+	•	A structured layout with:
+	•	Top Left Corner: 64-byte key generation & sign button.
+	•	Header Alert: If the folder isn’t locked.
+	•	Left Sidebar: List of subfolders and uploaded files.
+	•	Right Panel: File details, preview, and download options.
+
+6️⃣ Clearbit API for Dynamic Styling
+	•	Uses Clearbit API (logo.clearbit.com) to fetch branding logos dynamically.
+	•	Provides aesthetic, professional styling across the app.
+	•	Footer includes dynamically fetched template images & branding.
+
+📌 Tech Stack
+
+✅ Backend: Python (Flask/Django)
+✅ Frontend: HTML, CSS, JavaScript (script.js)
+✅ Database: PostgreSQL / SQLite / MySQL
+✅ QR Code Generation: qrcode library
+✅ File Storage: CReate storage for each user folder 
+✅ Security: AES Encryption for 64-byte key locking
+✅ Performance: Celery + Redis for fast file uploads & processing
+✅ Styling: Advanced CSS animations, smooth UI interactions
+
+💡 How It Works
+	1.	User visits the homepage, clicks “Generate 64-Byte Key.”
+	2.	A random key is assigned to their folder.
+	3.	If they don’t lock the folder, a security warning is displayed.
+	4.	Users scan a QR code to upload files from mobile.
+	5.	Uploaded files appear in the web app file manager.
+	6.	Users create subfolders inside their main folder.
+	7.	Files are stored securely, retrievable using the 64-byte key.
+
+🚀 Additional Features
+
+✔ Real-time WebSocket Updates (Live file sync between devices)
+✔ AES-256 Encryption (Securing user data)
+✔ Search & Filter System (Locate files instantly)
+✔ User-Friendly Interface (Modern UI with smooth animations)
