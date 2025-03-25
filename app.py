@@ -5,16 +5,49 @@ import shutil
 from flask import Flask, render_template, request, redirect, flash, url_for, session, jsonify, send_from_directory, Response
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase
+from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+from flask_migrate import Migrate
 import qrcode
 from io import BytesIO
 import base64
 from werkzeug.utils import secure_filename
+from urllib.parse import urlparse
 import secrets
 import uuid
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 import time
 from utils import get_file_icon, format_file_size
+from flask_wtf import FlaskForm
+from wtforms import StringField, PasswordField, BooleanField, SubmitField
+from wtforms.validators import DataRequired, Email, EqualTo, Length, ValidationError
+
+# Define form classes
+class LoginForm(FlaskForm):
+    username = StringField('Username', validators=[DataRequired()])
+    password = PasswordField('Password', validators=[DataRequired()])
+    remember_me = BooleanField('Remember Me')
+    submit = SubmitField('Log In')
+
+class SignupForm(FlaskForm):
+    username = StringField('Username', validators=[DataRequired(), Length(min=3, max=64)])
+    email = StringField('Email', validators=[DataRequired(), Email(), Length(max=120)])
+    password = PasswordField('Password', validators=[DataRequired(), Length(min=8, max=128)])
+    confirm_password = PasswordField('Confirm Password', validators=[DataRequired(), EqualTo('password')])
+    terms = BooleanField('I agree to the terms and conditions', validators=[DataRequired()])
+    submit = SubmitField('Sign Up')
+    
+    def validate_username(self, username):
+        from models import User
+        user = User.query.filter_by(username=username.data).first()
+        if user is not None:
+            raise ValidationError('Please use a different username.')
+    
+    def validate_email(self, email):
+        from models import User
+        user = User.query.filter_by(email=email.data).first()
+        if user is not None:
+            raise ValidationError('Please use a different email address.')
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -33,10 +66,25 @@ app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
     "pool_pre_ping": True,
 }
 
+# Initialize extensions
+db.init_app(app)
+migrate = Migrate(app, db)
+
+# Configure Flask-Login
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+login_manager.login_message = 'Please log in to access this page'
+login_manager.login_message_category = 'info'
+
+@login_manager.user_loader
+def load_user(user_id):
+    from models import User
+    return db.session.get(User, int(user_id))
+
 # Register custom Jinja2 filters
 app.jinja_env.filters['file_icon'] = get_file_icon
 app.jinja_env.filters['format_size'] = format_file_size
-db.init_app(app)
 
 # Configure file uploads
 UPLOAD_FOLDER = os.path.join(os.getcwd(), "uploads")
@@ -48,18 +96,11 @@ app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB max upload
 # Import models after db initialization
 with app.app_context():
     from models import User, Folder, File
-    db.create_all()
 
 @app.route('/')
+@login_required
 def index():
-    user_id = session.get('user_id')
-    if not user_id:
-        # Create a new anonymous user
-        user = User(username=str(uuid.uuid4()))
-        db.session.add(user)
-        db.session.commit()
-        session['user_id'] = user.id
-        user_id = user.id
+    user_id = current_user.id
     
     # Generate QR code for mobile upload
     qr = qrcode.QRCode(
@@ -79,7 +120,6 @@ def index():
     qr_code = base64.b64encode(buffered.getvalue()).decode()
     
     # Get user's root folder
-    user = User.query.get(user_id)
     root_folder = Folder.query.filter_by(user_id=user_id, parent_id=None).first()
     
     if not root_folder:
@@ -94,7 +134,7 @@ def index():
     
     return render_template('index.html', 
                           qr_code=qr_code, 
-                          user=user, 
+                          user=current_user, 
                           root_folder=root_folder, 
                           subfolders=subfolders, 
                           files=files,
@@ -601,6 +641,64 @@ def retrieve_folder():
     
     flash('Folder retrieved successfully! You now have access to all files.')
     return redirect(url_for('index'))
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    
+    form = LoginForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(username=form.username.data).first()
+        if user is None or not user.check_password(form.password.data):
+            flash('Invalid username or password', 'danger')
+            return redirect(url_for('login'))
+        
+        login_user(user, remember=form.remember_me.data)
+        next_page = request.args.get('next')
+        if not next_page or urlparse(next_page).netloc != '':
+            next_page = url_for('index')
+        
+        session['user_id'] = user.id  # Set session variable for backward compatibility
+        flash('Login successful!', 'success')
+        return redirect(next_page)
+    
+    return render_template('login.html', title='Log In', form=form)
+
+@app.route('/signup', methods=['GET', 'POST'])
+def signup():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    
+    form = SignupForm()
+    if form.validate_on_submit():
+        user = User(username=form.username.data, email=form.email.data)
+        user.set_password(form.password.data)
+        db.session.add(user)
+        db.session.commit()
+        
+        # Log in the user after signup
+        login_user(user)
+        session['user_id'] = user.id  # Set session variable for backward compatibility
+        
+        # Create root folder for the new user
+        root_folder = Folder(name="Root", user_id=user.id)
+        db.session.add(root_folder)
+        db.session.commit()
+        
+        flash('Account created successfully! Welcome to FileLock!', 'success')
+        return redirect(url_for('index'))
+    
+    return render_template('signup.html', title='Sign Up', form=form)
+
+@app.route('/logout')
+def logout():
+    logout_user()
+    session.pop('user_id', None)
+    session.pop('folder_locked', None)
+    session.pop('has_key', None)
+    flash('You have been logged out successfully.', 'info')
+    return redirect(url_for('login'))
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)

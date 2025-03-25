@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="card shadow-lg border-0 rounded-lg">
+                <div class="card-header bg-primary text-white text-center py-4">
+                    <h3 class="my-0"><i class="fas fa-sign-in-alt me-2"></i>Login</h3>
+                </div>
+                <div class="card-body p-4">
+                    <div class="text-center mb-4">
+                        <i class="fas fa-lock fa-3x text-primary mb-3"></i>
+                        <p class="lead">Access your secure files</p>
+                    </div>
+                    
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ category }}">{{ message }}</div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+                    
+                    <form action="{{ url_for('login') }}" method="POST">
+                        {{ form.hidden_tag() }}
+                        <div class="form-floating mb-3">
+                            {{ form.username(class="form-control", id="username", placeholder="Username", required=True, autofocus=True) }}
+                            <label for="username">Username</label>
+                            {% for error in form.username.errors %}
+                                <div class="text-danger small mt-1">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="form-floating mb-3">
+                            {{ form.password(class="form-control", id="password", placeholder="Password", required=True) }}
+                            <label for="password">Password</label>
+                            {% for error in form.password.errors %}
+                                <div class="text-danger small mt-1">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="form-check mb-3">
+                            {{ form.remember_me(class="form-check-input", id="remember") }}
+                            <label class="form-check-label" for="remember">Remember me</label>
+                        </div>
+                        
+                        <div class="d-grid">
+                            {{ form.submit(class="btn btn-primary btn-lg") }}
+                        </div>
+                    </form>
+                </div>
+                <div class="card-footer text-center py-3">
+                    <div class="small">
+                        <a href="{{ url_for('signup') }}">Need an account? Sign up!</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

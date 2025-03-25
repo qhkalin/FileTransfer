@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="card shadow-lg border-0 rounded-lg">
+                <div class="card-header bg-success text-white text-center py-4">
+                    <h3 class="my-0"><i class="fas fa-user-plus me-2"></i>Sign Up</h3>
+                </div>
+                <div class="card-body p-4">
+                    <div class="text-center mb-4">
+                        <i class="fas fa-shield-alt fa-3x text-success mb-3"></i>
+                        <p class="lead">Create a secure account</p>
+                    </div>
+                    
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ category }}">{{ message }}</div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+                    
+                    <form action="{{ url_for('signup') }}" method="POST">
+                        <div class="form-floating mb-3">
+                            <input class="form-control" id="username" name="username" type="text" placeholder="Username" required autofocus />
+                            <label for="username">Username</label>
+                        </div>
+                        
+                        <div class="form-floating mb-3">
+                            <input class="form-control" id="email" name="email" type="email" placeholder="name@example.com" required />
+                            <label for="email">Email address</label>
+                        </div>
+                        
+                        <div class="form-floating mb-3">
+                            <input class="form-control" id="password" name="password" type="password" placeholder="Password" required />
+                            <label for="password">Password</label>
+                        </div>
+                        
+                        <div class="form-floating mb-3">
+                            <input class="form-control" id="confirm_password" name="confirm_password" type="password" placeholder="Confirm Password" required />
+                            <label for="confirm_password">Confirm Password</label>
+                        </div>
+                        
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" id="terms" name="terms" type="checkbox" required />
+                            <label class="form-check-label" for="terms">I agree to the terms and conditions</label>
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="fas fa-user-plus me-2"></i>Create Account
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                <div class="card-footer text-center py-3">
+                    <div class="small">
+                        <a href="{{ url_for('login') }}">Already have an account? Login!</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
