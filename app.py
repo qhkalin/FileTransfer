@@ -496,10 +496,10 @@ def download_folder(folder_id):
         flash('Access denied.')
         return redirect(url_for('index'))
     
-    # Check if folder is locked and user is authenticated
-    if session.get('folder_locked', False) == False:
-        flash('Your folder is not locked. Please lock your folder for security.')
-        return redirect(url_for('index'))
+    # Check if the folder is visible (not locked) or if user has the key
+    if not folder.is_visible and not session.get('has_key', False):
+        flash('This folder is locked. Please unlock it first to download its contents.')
+        return redirect(url_for('view_folder', folder_id=folder_id))
     
     # Create a temporary directory to store the folder structure
     temp_dir = os.path.join(app.config['UPLOAD_FOLDER'], f"temp_{str(uuid.uuid4())}")
