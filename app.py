@@ -92,8 +92,13 @@ UPLOAD_FOLDER = os.path.join(os.getcwd(), "uploads")
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-# Set max upload size to 30GB
-app.config['MAX_CONTENT_LENGTH'] = 30 * 1024 * 1024 * 1024  # 30GB max upload
+# Set max content length for regular uploads, chunked uploads will bypass this
+app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  # 500MB for regular uploads
+
+# Create a temporary directory for chunked uploads
+CHUNK_FOLDER = os.path.join(os.getcwd(), "chunks")
+if not os.path.exists(CHUNK_FOLDER):
+    os.makedirs(CHUNK_FOLDER)
 
 # Import models after db initialization
 with app.app_context():
@@ -282,11 +287,8 @@ def view_folder(folder_id):
                           folder_locked=session.get('folder_locked', False))
 
 @app.route('/upload', methods=['GET', 'POST'])
+@login_required
 def upload():
-    user_id = session.get('user_id')
-    if not user_id:
-        return redirect(url_for('index'))
-    
     if request.method == 'POST':
         folder_id = request.form.get('folder_id')
         
@@ -297,7 +299,7 @@ def upload():
         folder = Folder.query.get_or_404(folder_id)
         
         # Security check
-        if folder.user_id != user_id:
+        if folder.user_id != current_user.id:
             flash('Access denied.')
             return redirect(url_for('index'))
         
@@ -324,7 +326,7 @@ def upload():
                 size=os.path.getsize(file_path),
                 file_type=filename.split('.')[-1] if '.' in filename else '',
                 folder_id=folder_id,
-                user_id=user_id
+                user_id=current_user.id
             )
             db.session.add(new_file)
             db.session.commit()
@@ -339,11 +341,178 @@ def upload():
     folder = Folder.query.get_or_404(folder_id)
     
     # Security check
-    if folder.user_id != user_id:
+    if folder.user_id != current_user.id:
         flash('Access denied.')
         return redirect(url_for('index'))
     
     return render_template('upload.html', folder=folder)
+
+
+@app.route('/large_upload', methods=['GET'])
+@login_required
+def large_upload():
+    """Page for handling large file uploads (up to 30GB) using chunked upload"""
+    folder_id = request.args.get('folder_id')
+    if not folder_id:
+        return redirect(url_for('index'))
+    
+    folder = Folder.query.get_or_404(folder_id)
+    
+    # Security check
+    if folder.user_id != current_user.id:
+        flash('Access denied.')
+        return redirect(url_for('index'))
+    
+    return render_template('large_upload.html', folder=folder)
+
+# Chunked upload API endpoints
+@app.route('/api/upload/init', methods=['POST'])
+@login_required
+def init_chunked_upload():
+    """Initialize a new chunked upload session"""
+    folder_id = request.form.get('folder_id')
+    filename = request.form.get('filename')
+    total_size = request.form.get('total_size')
+    total_chunks = request.form.get('total_chunks')
+    
+    if not folder_id or not filename or not total_size or not total_chunks:
+        return jsonify({
+            'success': False,
+            'message': 'Missing required parameters'
+        }), 400
+    
+    # Validate folder access
+    folder = Folder.query.get_or_404(folder_id)
+    if folder.user_id != current_user.id:
+        return jsonify({
+            'success': False,
+            'message': 'Access denied'
+        }), 403
+    
+    # Create a unique upload ID
+    upload_id = str(uuid.uuid4())
+    
+    # Create directory for chunks
+    upload_dir = os.path.join(CHUNK_FOLDER, upload_id)
+    os.makedirs(upload_dir)
+    
+    # Store upload info in session
+    session['chunked_uploads'] = session.get('chunked_uploads', {})
+    session['chunked_uploads'][upload_id] = {
+        'filename': secure_filename(filename),
+        'folder_id': folder_id,
+        'total_size': int(total_size),
+        'total_chunks': int(total_chunks),
+        'received_chunks': 0,
+        'upload_dir': upload_dir
+    }
+    
+    return jsonify({
+        'success': True,
+        'upload_id': upload_id,
+        'message': 'Upload initialized'
+    })
+
+@app.route('/api/upload/chunk/<upload_id>', methods=['POST'])
+@login_required
+def upload_chunk(upload_id):
+    """Handle upload of a single chunk"""
+    if 'chunked_uploads' not in session or upload_id not in session['chunked_uploads']:
+        return jsonify({
+            'success': False,
+            'message': 'Invalid upload ID'
+        }), 400
+    
+    upload_info = session['chunked_uploads'][upload_id]
+    
+    # Get chunk number
+    chunk_number = request.form.get('chunk_number')
+    if not chunk_number:
+        return jsonify({
+            'success': False,
+            'message': 'Missing chunk number'
+        }), 400
+    
+    chunk_number = int(chunk_number)
+    
+    # Check if the post request has the file part
+    if 'chunk' not in request.files:
+        return jsonify({
+            'success': False,
+            'message': 'No file part'
+        }), 400
+    
+    # Save chunk to disk
+    chunk = request.files['chunk']
+    chunk_path = os.path.join(upload_info['upload_dir'], f'chunk_{chunk_number}')
+    chunk.save(chunk_path)
+    
+    # Update received chunks count
+    upload_info['received_chunks'] += 1
+    
+    # Check if all chunks received
+    if upload_info['received_chunks'] >= upload_info['total_chunks']:
+        # All chunks received, assemble file
+        return assemble_chunks(upload_id)
+    
+    return jsonify({
+        'success': True,
+        'message': f'Chunk {chunk_number} received',
+        'received_chunks': upload_info['received_chunks'],
+        'total_chunks': upload_info['total_chunks']
+    })
+
+def assemble_chunks(upload_id):
+    """Assemble all chunks into the final file"""
+    if 'chunked_uploads' not in session or upload_id not in session['chunked_uploads']:
+        return jsonify({
+            'success': False,
+            'message': 'Invalid upload ID'
+        }), 400
+    
+    upload_info = session['chunked_uploads'][upload_id]
+    
+    # Create final file
+    filename = upload_info['filename']
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], f"{upload_id}_{filename}")
+    
+    # Assemble file from chunks
+    with open(file_path, 'wb') as output_file:
+        for i in range(upload_info['total_chunks']):
+            chunk_path = os.path.join(upload_info['upload_dir'], f'chunk_{i}')
+            if os.path.exists(chunk_path):
+                with open(chunk_path, 'rb') as chunk_file:
+                    output_file.write(chunk_file.read())
+    
+    # Create file record in database
+    folder_id = upload_info['folder_id']
+    file_size = os.path.getsize(file_path)
+    file_type = filename.split('.')[-1] if '.' in filename else ''
+    
+    new_file = File(
+        name=filename,
+        path=file_path,
+        size=file_size,
+        file_type=file_type,
+        folder_id=folder_id,
+        user_id=current_user.id
+    )
+    db.session.add(new_file)
+    db.session.commit()
+    
+    # Clean up chunks
+    shutil.rmtree(upload_info['upload_dir'], ignore_errors=True)
+    
+    # Remove upload info from session
+    del session['chunked_uploads'][upload_id]
+    
+    return jsonify({
+        'success': True,
+        'message': 'File upload complete',
+        'file_id': new_file.id,
+        'file_name': new_file.name,
+        'file_size': format_file_size(new_file.size)
+    })
 
 @app.route('/mobile_upload/<int:user_id>', methods=['GET', 'POST'])
 def mobile_upload(user_id):
@@ -403,15 +572,12 @@ def mobile_upload(user_id):
     return render_template('mobile_upload.html', user_id=user_id)
 
 @app.route('/download/<int:file_id>')
+@login_required
 def download_file(file_id):
-    user_id = session.get('user_id')
-    if not user_id:
-        return redirect(url_for('index'))
-    
     file = File.query.get_or_404(file_id)
     
     # Security check
-    if file.user_id != user_id:
+    if file.user_id != current_user.id:
         flash('Access denied.')
         return redirect(url_for('index'))
     
