@@ -212,10 +212,13 @@
             const lockKeyInput = document.getElementById('lock-key-input');
             const unlockKeyInput = document.getElementById('unlock-key-input');
             
-            keyInput.addEventListener('input', function() {
-                if (lockKeyInput) lockKeyInput.value = keyInput.value;
-                if (unlockKeyInput) unlockKeyInput.value = keyInput.value;
-            });
+            // Only add event listeners if these elements exist (for authenticated users)
+            if (keyInput) {
+                keyInput.addEventListener('input', function() {
+                    if (lockKeyInput) lockKeyInput.value = keyInput.value;
+                    if (unlockKeyInput) unlockKeyInput.value = keyInput.value;
+                });
+            }
             
             // Update lock/unlock buttons based on current lock status
             const folderLockStatus = document.getElementById('folder-lock-status');

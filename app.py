@@ -3,6 +3,7 @@ import logging
 import zipfile
 import shutil
 from flask import Flask, render_template, request, redirect, flash, url_for, session, jsonify, send_from_directory, Response
+from werkzeug.middleware.proxy_fix import ProxyFix
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
@@ -91,7 +92,8 @@ UPLOAD_FOLDER = os.path.join(os.getcwd(), "uploads")
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB max upload
+# Set max upload size to 30GB
+app.config['MAX_CONTENT_LENGTH'] = 30 * 1024 * 1024 * 1024  # 30GB max upload
 
 # Import models after db initialization
 with app.app_context():
