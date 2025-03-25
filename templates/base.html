@@ -201,11 +201,13 @@
                 const isLocked = folderLockStatus.dataset.locked === 'True';
                 
                 if (isLocked) {
-                    lockFolderBtn.disabled = true;
-                    unlockFolderBtn.disabled = false;
+                    // When folder is locked, show the unlock button and hide lock button
+                    lockFolderBtn.style.display = 'none';
+                    unlockFolderBtn.style.display = 'inline-block';
                 } else {
-                    lockFolderBtn.disabled = false;
-                    unlockFolderBtn.disabled = true;
+                    // When folder is unlocked, show the lock button and hide unlock button
+                    lockFolderBtn.style.display = 'inline-block';
+                    unlockFolderBtn.style.display = 'none';
                 }
             }
         });

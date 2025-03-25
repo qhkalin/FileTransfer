@@ -130,7 +130,9 @@ def lock_folder():
     
     user = User.query.get(user_id)
     if user.key_hash == key:
+        # Set the session variables to indicate folder is locked and user has the key
         session['folder_locked'] = True
+        session['has_key'] = True
         
         # Hide all files and folders when locked
         root_folder = Folder.query.filter_by(user_id=user_id, parent_id=None).first()
@@ -169,7 +171,9 @@ def unlock_folder():
     
     user = User.query.get(user_id)
     if user.key_hash == key:
+        # Set the session variables to indicate folder is unlocked and user has the key
         session['folder_locked'] = False
+        session['has_key'] = True
         
         # Show all files and folders when unlocked
         root_folder = Folder.query.filter_by(user_id=user_id, parent_id=None).first()
@@ -382,9 +386,13 @@ def download_file(file_id):
         flash('Access denied.')
         return redirect(url_for('index'))
     
-    # Check if folder is locked and user is authenticated
-    if session.get('folder_locked', False) == False:
-        flash('Your folder is not locked. Please lock your folder for security.')
+    # Get the folder this file belongs to
+    folder = Folder.query.get(file.folder_id)
+    
+    # Check if the folder is not visible (locked) and user doesn't have the key
+    if not folder.is_visible and not session.get('has_key', False):
+        flash('This file is in a locked folder. Please unlock the folder first to download its contents.')
+        return redirect(url_for('view_folder', folder_id=file.folder_id))
     
     # Return the file for download
     directory = os.path.dirname(file.path)
@@ -589,6 +597,7 @@ def retrieve_folder():
     # Set session to this user
     session['user_id'] = user.id
     session['folder_locked'] = False  # Unlock the folder for access
+    session['has_key'] = True  # Indicate user has the valid key
     
     flash('Folder retrieved successfully! You now have access to all files.')
     return redirect(url_for('index'))

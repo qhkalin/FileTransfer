@@ -501,6 +501,8 @@ function setupAutoBackup() {
 function updateFolderLockStatus() {
     const folderLockStatus = document.getElementById('folder-lock-status');
     const folderLockAlert = document.getElementById('folder-lock-alert');
+    const lockFolderBtn = document.getElementById('lock-folder-btn');
+    const unlockFolderBtn = document.getElementById('unlock-folder-btn');
     
     if (!folderLockStatus) return;
     
@@ -511,10 +513,22 @@ function updateFolderLockStatus() {
         if (folderLockAlert) {
             folderLockAlert.style.display = 'none';
         }
+        
+        // Update buttons visibility
+        if (lockFolderBtn && unlockFolderBtn) {
+            lockFolderBtn.style.display = 'none';
+            unlockFolderBtn.style.display = 'inline-block';
+        }
     } else {
         // Folder is unlocked - show warning
         if (folderLockAlert) {
             folderLockAlert.style.display = 'block';
+        }
+        
+        // Update buttons visibility
+        if (lockFolderBtn && unlockFolderBtn) {
+            lockFolderBtn.style.display = 'inline-block';
+            unlockFolderBtn.style.display = 'none';
         }
     }
 }
