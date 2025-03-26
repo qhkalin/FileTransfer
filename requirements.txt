@@ -13,3 +13,4 @@ flask-cors>=5.0.1
 flask-jwt-extended>=4.7.1
 routes>=2.5.1
 flask-wtf>=1.2.2
+flask_migrate
